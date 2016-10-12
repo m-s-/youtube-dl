@@ -233,16 +233,37 @@ class DailymotionIE(DailymotionBaseInfoExtractor):
 
         info = self._parse_json(
             self._search_regex(
-                r'var info = ({.*?}),$', embed_page,
+                r'var config = ({.*})', embed_page,
                 'video info', flags=re.MULTILINE),
             video_id)
 
         self._check_error(info)
 
+        
+
         formats = []
-        for (key, format_id) in self._FORMATS:
-            video_url = info.get(key)
-            if video_url is not None:
+        # for (key, format_id) in self._FORMATS:
+        #     video_url = info.get(key)
+        #     if video_url is not None:
+        #         m_size = re.search(r'H264-(\d+)x(\d+)', video_url)
+        #         if m_size is not None:
+        #             width, height = map(int_or_none, (m_size.group(1), m_size.group(2)))
+        #         else:
+        #             width, height = None, None
+        #         formats.append({
+        #             'url': video_url,
+        #             'ext': 'mp4',
+        #             'format_id': format_id,
+        #             'width': width,
+        #             'height': height,
+        #         })
+        info = info["metadata"]
+        qualities = info["qualities"]
+        for quality in qualities:
+            for i in range(0, len(qualities[quality])):
+                video_url = qualities[quality][i]["url"]
+                if quality == "auto":
+                    continue
                 m_size = re.search(r'H264-(\d+)x(\d+)', video_url)
                 if m_size is not None:
                     width, height = map(int_or_none, (m_size.group(1), m_size.group(2)))
@@ -251,10 +272,11 @@ class DailymotionIE(DailymotionBaseInfoExtractor):
                 formats.append({
                     'url': video_url,
                     'ext': 'mp4',
-                    'format_id': format_id,
+                    'format_id': quality+"_"+str(i+1),
                     'width': width,
                     'height': height,
                 })
+
         self._sort_formats(formats)
 
         # subtitles
@@ -269,12 +291,12 @@ class DailymotionIE(DailymotionBaseInfoExtractor):
         return {
             'id': video_id,
             'formats': formats,
-            'uploader': info['owner.screenname'],
+            'uploader': info['owner']['screenname'],
             'timestamp': timestamp,
             'title': title,
             'description': description,
             'subtitles': video_subtitles,
-            'thumbnail': info['thumbnail_url'],
+            'thumbnail': info['poster_url'],
             'age_limit': age_limit,
             'view_count': view_count,
             'duration': info['duration']
